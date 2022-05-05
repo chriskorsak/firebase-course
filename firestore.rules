@@ -11,6 +11,27 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Add new rules here
+    // To do list
+    match /todos/{todo} {
+      allow read: if isLoggedIn();
+      allow create: if request.auth.uid == request.resource.data.uid;
+      allow update, delete: if request.auth.uid == resource.data.uid;
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if isLoggedIn();
+      // Allow changes to own profile, but not isAdmin field
+      allow update: if request.auth.uid == userId && (!request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['isAdmin']));
+      // Allow changes to any profile if admin, but not isAdmin field
+      allow update: if isLoggedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true && (!request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['isAdmin']));
+    }
+
+    //functions
+    function isLoggedIn() {
+      return request.auth.uid != null;
+    }
   }
 }
